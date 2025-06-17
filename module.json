@@ -1,0 +1,16 @@
+{
+    "disableAutoUpdate": false,
+    "name": "DRAGON-VALKYRIE",
+    "author": "Dragon",
+    "description": "==",
+    "version": "1.0",
+    "servers": ["https://raw.githubusercontent.com/DragonTera/DRAGON-VALKYRIE/MASTER/"],
+    "options": 
+    {
+        "niceName": "DRAGON-VALKYRIE",
+        "guiName": "DRAGON-VALKYRIE",
+        "settingsVersion": 1,
+        "settingsFile": "config.json",
+        "settingsMigrator": "settings_migrator.js"
+    }
+}

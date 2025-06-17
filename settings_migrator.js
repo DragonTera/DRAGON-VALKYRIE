@@ -1,0 +1,38 @@
+const DefaultSettings = 
+{
+	"DEBUG": false,
+    "LEAPING_SLASH_KEY": "f9",
+    "LEAPING_SLASH_KEY_DESCRIPTION": "Botao para usar a skill Leaping Slash.",
+    "GROUND_BASH_KEY": "f10",
+    "GROUND_BASH_KEY_DESCRIPTION": "Botao para usar a skill Ground Bash.",
+    "GLAIVE_STRIKE_KEY": "f11",
+    "GLAIVE_STRIKE_KEY_DESCRIPTION": "Botao para usar a skill Glaive Strike.",
+    "RUNEBURST_KEY": "f12",
+    "RUNEBURST_KEY_DESCRIPTION": "Botao para usar a skill Runeburst.",
+    "RUNEMARK": true,
+    "RUNEMARK_DESCRIPTION": "Nao habilitar a sequencia de skills se ja estiver com 7 Runemark",
+    "RUNEBURST": false,
+    "RUNEBURST_DESCRIPTION": "Utilizar a skill Runeburst apos Dark Herald",
+    "WINDSLASH": false,
+    "WINDSLASH_DESCRIPTION": "Utilizar a skill Leaping Slash apos Wind Slash.",
+    "LEAPING_SLASH": false,
+    "LEAPING_SLASH_DESCRIPTION": "Utilizar a skill Ground Bash ou Glaive Strike apos Leaping Slash. Prioriza Ground Bash",
+    "GODSFALL_KEYS": false,
+    "GODSFALL_KEYS_DESCRIPTION": "Precionar os botoes KEY_Am KEY_B e KEY_C assim que a habilidade Godsfall for ativada.",
+    "KEY_A": "f1",
+    "KEY_B": "f2",
+    "KEY_C": "f3"
+}
+
+module.exports = function MigrateSettings(from_ver, to_ver, settings)
+{
+    if (from_ver === undefined)
+        {
+        // Migrate legacy config file
+        return Object.assign(Object.assign({}, DefaultSettings), settings);
+    }
+    else if (from_ver === null) {
+        // No config file exists, use default settings
+        return DefaultSettings;
+    }
+}
