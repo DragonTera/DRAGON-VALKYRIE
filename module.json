@@ -2,14 +2,14 @@
     "disableAutoUpdate": false,
     "name": "DRAGON-VALKYRIE",
     "author": "Dragon",
-    "description": "==",
-    "version": "1.0",
+    "description": "Generic script for valkyrie.",
+    "version": "2.00",
     "servers": ["https://raw.githubusercontent.com/DragonTera/DRAGON-VALKYRIE/MASTER/"],
     "options": 
     {
-        "niceName": "DRAGON-VALKYRIE",
-        "guiName": "DRAGON-VALKYRIE",
-        "settingsVersion": 1,
+        "niceName": "<font color='#04ACEC'>DRAGON-VALKYRIE</font>",
+        "guiName": "<font color='#04ACEC'>DRAGON-VALKYRIE</font>",
+        "settingsVersion": 2.00,
         "settingsFile": "config.json",
         "settingsMigrator": "settings_migrator.js"
     }

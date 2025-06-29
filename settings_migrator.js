@@ -1,38 +1,54 @@
 const DefaultSettings = 
 {
 	"DEBUG": false,
-    "LEAPING_SLASH_KEY": "f9",
-    "LEAPING_SLASH_KEY_DESCRIPTION": "Botao para usar a skill Leaping Slash.",
-    "GROUND_BASH_KEY": "f10",
-    "GROUND_BASH_KEY_DESCRIPTION": "Botao para usar a skill Ground Bash.",
-    "GLAIVE_STRIKE_KEY": "f11",
-    "GLAIVE_STRIKE_KEY_DESCRIPTION": "Botao para usar a skill Glaive Strike.",
-    "RUNEBURST_KEY": "f12",
-    "RUNEBURST_KEY_DESCRIPTION": "Botao para usar a skill Runeburst.",
+    "ENABLE": true,
+    "FAST_CANCEL": false,
+    "AUTO_GROUND_BASH": false,
+    "AUTO_LEAPING_SLASH": false,
     "RUNEMARK": true,
-    "RUNEMARK_DESCRIPTION": "Nao habilitar a sequencia de skills se ja estiver com 7 Runemark",
-    "RUNEBURST": false,
-    "RUNEBURST_DESCRIPTION": "Utilizar a skill Runeburst apos Dark Herald",
-    "WINDSLASH": false,
-    "WINDSLASH_DESCRIPTION": "Utilizar a skill Leaping Slash apos Wind Slash.",
-    "LEAPING_SLASH": false,
-    "LEAPING_SLASH_DESCRIPTION": "Utilizar a skill Ground Bash ou Glaive Strike apos Leaping Slash. Prioriza Ground Bash",
-    "GODSFALL_KEYS": false,
-    "GODSFALL_KEYS_DESCRIPTION": "Precionar os botoes KEY_Am KEY_B e KEY_C assim que a habilidade Godsfall for ativada.",
-    "KEY_A": "f1",
-    "KEY_B": "f2",
-    "KEY_C": "f3"
+    "TITANSBANE": false
 }
 
 module.exports = function MigrateSettings(from_ver, to_ver, settings)
 {
-    if (from_ver === undefined)
-        {
-        // Migrate legacy config file
+    if(from_ver === undefined)
+    {
         return Object.assign(Object.assign({}, DefaultSettings), settings);
     }
-    else if (from_ver === null) {
-        // No config file exists, use default settings
+    else if(from_ver === null)
+    {
         return DefaultSettings;
     }
+    else
+    {
+		if(from_ver + 1 < to_ver)
+        {
+			settings = MigrateSettings(from_ver, from_ver + 1, settings);
+			return MigrateSettings(from_ver + 1, to_ver, settings);
+		}
+		switch(to_ver)
+        {
+			default:
+				let oldsettings = settings;
+				
+                settings = Object.assign(DefaultSettings, {});
+
+				for(let option in oldsettings)
+                {
+					if(settings[option])
+                    {
+						settings[option] = oldsettings[option];
+					}
+				}
+
+				if(from_ver < to_ver)
+                {
+                    console.log('<font color=\'#04ACEC\'>DRAGON-VALKYRIE:</font> Your settings have been updated to version ' + to_ver + '.');
+                    console.log('<font color=\'#04ACEC\'>DRAGON-VALKYRIE:</font> You can edit the new config file after the next relog.');
+                }
+				
+                break;
+		}
+		return settings;
+	}
 }
