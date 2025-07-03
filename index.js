@@ -4,6 +4,8 @@ const SettingsUI = require('tera-mod-ui').Settings;
 
 const TAG = "<font color='#04ACEC'>DRAGON-VALKYRIE:</font> ";
 
+const DEBUG                 = false;
+
 const JOB_VALK              = 12;
 
 //1
@@ -181,7 +183,7 @@ const S_GODSFALL_7          = 250199;
 
 const RAGNAROK_BASE         = 5000;
                               //0     1     2     3     4     5     6    7    8     9   10    11   12     13    14   15    16   17    18    19    20    21    22    23   24    25
-const CANCEL_DELAY          = [null, null, null, 1200, null, 1700, 980, 800, null, 800, null, 950, null, null, null, 850, 600, null, null, null, null, null, null, 500, 1400, null];
+const CANCEL_DELAY          = [null, null, null, null, null, 1700, 980, 800, null, 800, null, 950, null, null, null, 850, 600, null, null, null, null, null, null, 500, 1400, null];
 
 const WHITE_LIST            = [11200, 11201, 11202, 11203, 20700, 20730, 20799, 25700, 25730, 30900, 30930, 30999, 35900, 35930, 41000, 41010, 41011, 41099, 46000, 46010, 50500, 50530, 50599, 55500, 
                                55530, 61200, 61230, 61299, 66200, 66230, 70900, 70901, 70902, 70930, 70999, 75900, 75901, 75902, 75930, 80100, 80101, 80130, 80199, 85100, 85101, 85130, 91100, 91130, 
@@ -192,19 +194,24 @@ const WHITE_LIST            = [11200, 11201, 11202, 11203, 20700, 20730, 20799, 
 
 module.exports = function valkyrie(mod)
 {
-    let job;
-    let templateId;
+    mod.game.initialize(['me', 'me.abnormalities']);
 
-    let mySpeed;
-    let myEnergy;
-    let runemark;
-    let moving;
+    let job         = (mod.game.me.templateId - 10101) % 100;
+    let playerLoc;
+    let playerW;
+    let playerDest;
+    let playerSpeed;
+    let playerEnergy;
+    let playerRunemark;
+    let playerMoving;
 
     let skillFinish = [];
     let skillCd     = [];
-    let taskSkillCd = [];
-    let taskSkill   = [];
+    let skillCdTask = [];
     let skillBefore = 0;
+
+    let configReload = false;
+    
 
     //--------------------------------------------------------------------------------------------------------------------------------------
     //  functions
@@ -215,10 +222,22 @@ module.exports = function valkyrie(mod)
         mod.toServer('C_START_TARGETED_SKILL', 7, 
         {
             skill: __skill,
+            skill:
+            { 
+                npc: false,
+                type: 1, 
+                huntingZoneId: 0, 
+                id : __skill,
+                reserved: 0
+            },
             w: __event.w,
             loc: __event.loc,
             dest: __event.dest,
-            targets: [[0, 0]],
+            targets: 
+            [{
+                gameId: __event.target,
+                hitCylinderId: 0
+            }],
         });
 
         return;
@@ -240,39 +259,14 @@ module.exports = function valkyrie(mod)
     
         return;
     }
-    
-    function _SkillInstance(__event, __skill)
+
+    function _SkillCannotStart(__skill)
     {
-        mod.toServer('C_START_INSTANCE_SKILL', 7, 
+        mod.send('S_CANNOT_START_SKILL', 4,
         {
-            skill: {
-                reserved: 0,
-                npc: false,
-                type: 1,
-                huntingZoneId: 0,
-                id: __skill
-            },
-            loc: {
-                x: __event.loc.x,
-                y: __event.loc.y,
-                z: __event.loc.z
-            },
-            w: __event.w,
-            continue: __event.continue,
-            targets: 
-            [{
-                arrowId: 0,
-                gameId: __event.target,
-                hitCylinderId: 0
-            }],
-            endpoints: 
-            [{
-                x: __event.dest.x,
-                y: __event.dest.y,
-                z: __event.dest.z
-            }]
+            skill: __skill
         });
-        
+    
         return;
     }
 
@@ -283,10 +277,10 @@ module.exports = function valkyrie(mod)
             gameId: mod.game.me.gameId,
             loc: __event.loc,
             w: __event.w,
-            templateId: templateId,
+            templateId: mod.game.me.templateId,
             skill: __skill,
             stage: __stage,
-            speed: mySpeed,
+            speed: playerSpeed,
             ...(mod.majorPatchVersion >= 75 ? { projectileSpeed: 1 } : 0n),
             id: __atkId,
             effectScale: 1.0,
@@ -306,7 +300,7 @@ module.exports = function valkyrie(mod)
             gameId: mod.game.me.gameId,
             loc: __event.loc,
             w: __event.w,
-            templateId: templateId,
+            templateId: mod.game.me.templateId,
             skill: __event.skill,
             type: __type,
             id: __atkId,
@@ -322,7 +316,7 @@ module.exports = function valkyrie(mod)
             gameId: mod.game.me.gameId,
             loc: __event.loc,
             w: __event.w,
-            templateId: templateId,
+            templateId: mod.game.me.templateId,
             skill: __event.skill,
             type: __type,
             id: __atkId,
@@ -352,93 +346,111 @@ module.exports = function valkyrie(mod)
         return Math.floor(__id / 10000);
     }
 
+    function _SkillReset()
+    {
+        for(let __i = 0; __i < 50; __i++)
+        {
+            clearInterval(skillCdTask[__i]);
+            skillFinish[__i] = true;
+            skillCd[__i]     = false;
+            skillCdTask[__i] = null;
+        }
+
+        skillBefore = 0;
+
+        return;
+    }
+
     //--------------------------------------------------------------------------------------------------------------------------------------
     //  Player event
     //--------------------------------------------------------------------------------------------------------------------------------------
 
-    mod.hook('S_LOGIN', mod.majorPatchVersion < 114 ? 14 : 15, (event) => 
+    mod.hook('S_LOGIN', mod.majorPatchVersion < 114 ? 14 : 15, {order: -Infinity}, (event) => 
     {
-        templateId  = event.templateId;
-        job         = (templateId -10101) % 100;
+        job = (mod.game.me.templateId - 10101) % 100;
 
-        if(job != JOB_VALK){return;}
+        _SkillReset();
+        configReload = true;
 
-        setTimeout(function (){mod.command.message('This mod does not work with NGSP, SP or any skill prediction / ping remover.');}, 10000);
+        return;
+    });
 
-        for(let __i = 0; __i < WHITE_LIST.length; __i++)
+    mod.hook("C_PLAYER_LOCATION", 5, {order: -Infinity}, (event) =>
+    {
+        job         = (mod.game.me.templateId - 10101) % 100;
+		playerLoc   = event.loc;
+		playerW     = event.w;
+        playerDest  = event.dest;
+
+        if(configReload == false)
         {
-            skillCd[__i] = false;
+            _SkillReset();
+            configReload = true;
         }
-        
-        return;
-    });
-
-    mod.hook('S_PLAYER_STAT_UPDATE', mod.majorPatchVersion < 105 ? 14 : (mod.majorPatchVersion < 108 ? 15 : 17), (event) =>
-    {
-        if(job != JOB_VALK){return;}
-        if(mod.settings.ENABLE == false){return;}
-
-        mySpeed = (event.attackSpeedBonus + event.attackSpeed) / event.attackSpeed;
 
         return;
-    });
-    
-    mod.hook('S_PLAYER_CHANGE_STAMINA', 1, (event) =>
-    {
-        if(job != JOB_VALK){return;}
-        if(mod.settings.ENABLE == false){return;}
+	});
 
-        myEnergy = event.current;
+    mod.hook('S_PLAYER_STAT_UPDATE', mod.majorPatchVersion < 105 ? 14 : (mod.majorPatchVersion < 108 ? 15 : 17), {order: -Infinity}, (event) =>
+    {
+        if(job != JOB_VALK || mod.settings.ENABLE == false){return;}
+
+        playerSpeed = (event.attackSpeedBonus + event.attackSpeed) / event.attackSpeed;
 
         return;
     });
     
-    mod.hook('S_WEAK_POINT', mod.majorPatchVersion < 114 ? 1 : 2, (event) =>
+    mod.hook('S_PLAYER_CHANGE_STAMINA', 1, {order: -Infinity}, (event) =>
     {
-        if(job != JOB_VALK){return;}
-        if(mod.settings.ENABLE == false){return;}
+        if(job != JOB_VALK || mod.settings.ENABLE == false){return;}
+
+        playerEnergy = event.current;
+
+        return;
+    });
+    
+    mod.hook('S_WEAK_POINT', mod.majorPatchVersion < 114 ? 1 : 2, {order: -Infinity}, (event) =>
+    {
+        if(job != JOB_VALK || mod.settings.ENABLE == false){return;}
         
-        runemark = event.runemarksAdded;
+        playerRunemark = event.runemarksAdded;
 
         return;
     });
 
     mod.game.on('leave_game', () => 
     {
-        for(let __i = 0; __i < WHITE_LIST.length; __i++)
-        {
-            clearInterval(taskSkillCd[__i]);
-        }
+        _SkillReset();
+
+        return;
     });
     
     //--------------------------------------------------------------------------------------------------------------------------------------
     //  Cooldown skills event
     //--------------------------------------------------------------------------------------------------------------------------------------
 
-    mod.hook('S_START_COOLTIME_SKILL', mod.majorPatchVersion < 114 ? 3 : 4, (event) =>
+    mod.hook('S_START_COOLTIME_SKILL', mod.majorPatchVersion < 114 ? 3 : 4, {order: -Infinity}, (event) =>
     {
         if(job != JOB_VALK){return;}
-        if(mod.settings.DEBUG){console.log(TAG + 'S_START_COOLTIME_SKILL: ' + event.skill.id + ' / ' + event.cooldown + ' | ' + _SkillNumber(event.skill.id));}
-        if(mod.settings.ENABLE == false){return;}
+        if(DEBUG == true){console.log(TAG + 'S_START_COOLTIME_SKILL: ' + event.skill.id + ' / ' + event.cooldown);}
         if(WHITE_LIST.includes(event.skill.id) == false){return;}
 
         skillCd[_SkillNumber(event.skill.id)] = true;
-        clearInterval(taskSkillCd[_SkillNumber(event.skill.id)]);
-        taskSkillCd[_SkillNumber(event.skill.id)] = setTimeout(function (){skillCd[_SkillNumber(event.skill.id)] = false;}, event.cooldown);
+        clearInterval(skillCdTask[_SkillNumber(event.skill.id)]);
+        skillCdTask[_SkillNumber(event.skill.id)] = setTimeout(function (){skillCd[_SkillNumber(event.skill.id)] = false;}, event.cooldown);
 
         return;
 	});
 
-    mod.hook('S_DECREASE_COOLTIME_SKILL', 3, (event) => 
+    mod.hook('S_DECREASE_COOLTIME_SKILL', 3, {order: -Infinity}, (event) => 
     {
         if(job != JOB_VALK){return;}
-        if(mod.settings.DEBUG){console.log(TAG + 'S_DECREASE_COOLTIME_SKILL: ' + event.skill.id + ' / ' + event.cooldown + ' | ' + _SkillNumber(event.skill.id));}
-        if(mod.settings.ENABLE == false){return;}
+        if(DEBUG == true){console.log(TAG + 'S_DECREASE_COOLTIME_SKILL: ' + event.skill.id + ' / ' + event.cooldown + ' | ' + _SkillNumber(event.skill.id));}
         if(WHITE_LIST.includes(event.skill.id) == false){return;}
 
         skillCd[_SkillNumber(event.skill.id)] = true;
-        clearInterval(taskSkillCd[_SkillNumber(event.skill.id)]);
-        taskSkillCd[_SkillNumber(event.skill.id)] = setTimeout(function (){skillCd[_SkillNumber(event.skill.id)] = false;}, event.cooldown);
+        clearInterval(skillCdTask[_SkillNumber(event.skill.id)]);
+        skillCdTask[_SkillNumber(event.skill.id)] = setTimeout(function (){skillCd[_SkillNumber(event.skill.id)] = false;}, event.cooldown);
 
         return;
 	});
@@ -447,22 +459,20 @@ module.exports = function valkyrie(mod)
     //  Cancel skills event
     //--------------------------------------------------------------------------------------------------------------------------------------
     
-    mod.hook('S_CANNOT_START_SKILL', 4, (event) => 
+    mod.hook('S_CANNOT_START_SKILL', 4, {order: -Infinity}, (event) => 
     {
         if(job != JOB_VALK){return;}
-        if(mod.settings.DEBUG){console.log(TAG + 'S_CANNOT_START_SKILL: ' + event.skill.id);}
-        if(mod.settings.ENABLE == false){return;}
-        if(WHITE_LIST.includes(event.skill.id) == false){return;}
+        if(DEBUG == true){console.log(TAG + 'S_CANNOT_START_SKILL: ' + event.skill.id);}
+        if(mod.settings.ENABLE == false || WHITE_LIST.includes(event.skill.id) == false){return;}
 
         return;
 	});
 
-    mod.hook('C_CANCEL_SKILL', 3, (event) => 
+    mod.hook('C_CANCEL_SKILL', 3, {order: -Infinity}, (event) => 
     {
         if(job != JOB_VALK){return;}
-        if(mod.settings.DEBUG){console.log(TAG + 'C_CANCEL_SKILL: ' + event.skill.id + ' | ' + event.type);}
-        if(mod.settings.ENABLE == false){return;}
-        if(WHITE_LIST.includes(event.skill.id) == false){return;}
+        if(DEBUG == true){console.log(TAG + 'C_CANCEL_SKILL: ' + event.skill.id + ' | ' + event.type);}
+        if(mod.settings.ENABLE == false || WHITE_LIST.includes(event.skill.id) == false){return;}
 
         return;
 	});
@@ -471,76 +481,47 @@ module.exports = function valkyrie(mod)
     //  Use skills event
     //--------------------------------------------------------------------------------------------------------------------------------------
 
-    mod.hook('C_NOTIFY_LOCATION_IN_DASH', 4, event =>
+    mod.hook('C_NOTIFY_LOCATION_IN_DASH', 4, {order: -Infinity}, (event) =>
     {
 		if(job != JOB_VALK){return;}
-        if(mod.settings.DEBUG){console.log(TAG + 'C_NOTIFY_LOCATION_IN_DASH: ' + event.skill.id);}
-        if(mod.settings.ENABLE == false){return;}
-        if(WHITE_LIST.includes(event.skill.id) == false){return;}
+        if(DEBUG == true){console.log(TAG + 'C_NOTIFY_LOCATION_IN_DASH: ' + event.skill.id);}
+        if(mod.settings.ENABLE == false || WHITE_LIST.includes(event.skill.id) == false){return;}
 	})
-	mod.hook('C_NOTIFY_LOCATION_IN_ACTION', 4, event =>
+	mod.hook('C_NOTIFY_LOCATION_IN_ACTION', 4, {order: -Infinity}, (event) =>
     {
 		if(job != JOB_VALK){return;}
-        if(mod.settings.DEBUG){console.log(TAG + 'C_NOTIFY_LOCATION_IN_ACTION: ' + event.skill.id + ' | ' + event.stage);}
-        if(mod.settings.ENABLE == false){return;}
-        if(WHITE_LIST.includes(event.skill.id) == false){return;}
+        if(DEBUG == true){console.log(TAG + 'C_NOTIFY_LOCATION_IN_ACTION: ' + event.skill.id + ' | ' + event.stage);}
+        if(mod.settings.ENABLE == false || WHITE_LIST.includes(event.skill.id) == false){return;}
 	})
 
-    mod.hook('C_PRESS_SKILL', mod.majorPatchVersion < 114 ? 4 : 5, (event) => 
+    mod.hook('C_PRESS_SKILL', mod.majorPatchVersion < 114 ? 4 : 5, {order: -Infinity}, (event) => 
     {
         if(job != JOB_VALK){return;}
-        if(mod.settings.DEBUG){console.log(TAG + 'C_PRESS_SKILL: ' + event.skill.id);}
-        if(mod.settings.ENABLE == false){return;}
-        if(WHITE_LIST.includes(event.skill.id) == false){return;}
+        if(DEBUG == true){console.log(TAG + 'C_PRESS_SKILL: ' + event.skill.id);}
+        if(mod.settings.ENABLE == false || WHITE_LIST.includes(event.skill.id) == false){return;}
 
         return;
 	});
 
-    mod.hook('C_START_SKILL', 7, (event) =>
+    mod.hook('C_START_SKILL', 7, {order: -99}, (event) =>
     {
         if(job != JOB_VALK){return;}
-        if(mod.settings.DEBUG){console.log(TAG + 'C_START_SKILL: ' + event.skill.id);}
-        if(mod.settings.ENABLE == false){return;}
-        if(WHITE_LIST.includes(event.skill.id) == false){return;}
+        if(DEBUG == true){console.log(TAG + 'C_START_SKILL: ' + event.skill.id);}
+        if(mod.settings.ENABLE == false || WHITE_LIST.includes(event.skill.id) == false){return;}
 
         skillFinish[_SkillNumber(event.skill.id)] = false;
-        moving = event.moving;
-
-        if(_SkillNumber(event.skill.id) == _SkillNumber(S_TITANSBANE_0) && mod.settings.TITANSBANE == true)
-        {
-            if(skillBefore != _SkillNumber(S_TITANSBANE_0))
-            {
-                _SkillInstance(event, S_TITANSBANE_4);
-            }
-            else
-            {
-                _SkillInstance(event, S_TITANSBANE_5);
-            }
-        }
-        else if((event.skill.id == S_GODSFALL_0 || event.skill.id == S_GODSFALL_1) && mod.settings.FAST_CANCEL == true)
-        {
-            _SkillInstance(event, S_GODSFALL_5);
-        }
-        else if((event.skill.id == S_GODSFALL_2 || event.skill.id == S_GODSFALL_3) && mod.settings.FAST_CANCEL == true)
-        {
-            _SkillInstance(event, S_GODSFALL_6);
-        }
-        else if(_SkillNumber(event.skill.id) == _SkillNumber(S_RAGNAROK_0) && mod.settings.FAST_CANCEL == true)
-        {
-            _SkillInstance(event, S_RAGNAROK_1);
-        }
+        playerMoving = event.moving;
 
         skillBefore = _SkillNumber(event.skill.id);
 
         return;
     });
 
-    mod.hook('S_ACTION_STAGE', 9, event => 
+    mod.hook('S_ACTION_STAGE', 9, {order: -Infinity}, (event) => 
     {
         if(mod.game.me.gameId != event.gameId || job != JOB_VALK){return;}
-        if(mod.settings.DEBUG){console.log(TAG + 'S_ACTION_STAGE: ' + event.skill.id);}
-        if(mod.settings.ENABLE == false){return;}
-        if(WHITE_LIST.includes(event.skill.id) == false){return;}
+        if(DEBUG == true){console.log(TAG + 'S_ACTION_STAGE: ' + event.skill.id);}
+        if(mod.settings.ENABLE == false || WHITE_LIST.includes(event.skill.id) == false){return;}
 
         if(CANCEL_DELAY[_SkillNumber(event.skill.id)] != null)
         {
@@ -552,7 +533,7 @@ module.exports = function valkyrie(mod)
             {
                 if(mod.settings.FAST_CANCEL == true){_SkillEndClient(event, event.id, 12394123);}
                 
-                if(mod.settings.RUNEMARK == true && runemark > 6){return;}
+                if(mod.settings.RUNEMARK == true && playerRunemark > 6){return;}
                 else
                 {
                     if(_SkillNumber(event.skill.id) == _SkillNumber(S_WINDSLASH_0) && mod.settings.AUTO_LEAPING_SLASH == true)
@@ -570,28 +551,26 @@ module.exports = function valkyrie(mod)
                 
                 return;
 
-            }, _SkillNumber(event.skill.id) == _SkillNumber(S_RUNEBURST_0) ? CANCEL_DELAY[_SkillNumber(event.skill.id)] : CANCEL_DELAY[_SkillNumber(event.skill.id)] / mySpeed);
+            }, _SkillNumber(event.skill.id) == _SkillNumber(S_RUNEBURST_0) ? CANCEL_DELAY[_SkillNumber(event.skill.id)] : CANCEL_DELAY[_SkillNumber(event.skill.id)] / playerSpeed);
         }
 
         return;
 	});
 
-    mod.hook('C_START_TARGETED_SKILL', 7, event => 
+    mod.hook('C_START_TARGETED_SKILL', 7, {order: -Infinity}, (event) => 
     {
         if(job != JOB_VALK){return;}
-        if(mod.settings.DEBUG){console.log(TAG + 'C_START_TARGETED_SKILL: ' + event.skill.id);}
-        if(mod.settings.ENABLE == false){return;}
-        if(WHITE_LIST.includes(event.skill.id) == false){return;}
+        if(DEBUG == true){console.log(TAG + 'C_START_TARGETED_SKILL: ' + event.skill.id);}
+        if(mod.settings.ENABLE == false || WHITE_LIST.includes(event.skill.id) == false){return;}
 
         return;
 	});
     
-    mod.hook('C_START_INSTANCE_SKILL', mod.majorPatchVersion < 114 ? 7 : 8, (event) => 
+    mod.hook('C_START_INSTANCE_SKILL', mod.majorPatchVersion < 114 ? 7 : 8, {order: -Infinity}, (event) => 
     {
         if(job != JOB_VALK){return;}
-        if(mod.settings.DEBUG){console.log(TAG + 'C_START_INSTANCE_SKILL: ' + event.skill.id);}
-        if(mod.settings.ENABLE == false){return;}
-        if(WHITE_LIST.includes(event.skill.id) == false){return;}
+        if(DEBUG == true){console.log(TAG + 'C_START_INSTANCE_SKILL: ' + event.skill.id);}
+        if(mod.settings.ENABLE == false || WHITE_LIST.includes(event.skill.id) == false){return;}
 
         return;
     });
@@ -600,10 +579,10 @@ module.exports = function valkyrie(mod)
     //  End skills event
     //--------------------------------------------------------------------------------------------------------------------------------------
 
-    mod.hook('S_ACTION_END', 5, (event) =>
+    mod.hook('S_ACTION_END', 5, {order: -Infinity}, (event) =>
     {
         if(mod.game.me.gameId != event.gameId || job != JOB_VALK){return;}
-        if(mod.settings.DEBUG){console.log(TAG + 'S_ACTION_END: ' + event.skill.id + ' | ' + event.type + ' | ' + event.id);}
+        if(DEBUG == true){console.log(TAG + 'S_ACTION_END: ' + event.skill.id);}
         if(WHITE_LIST.includes(event.skill.id) == false){return;}
 
         skillFinish[_SkillNumber(event.skill.id)] = true;
@@ -623,7 +602,7 @@ module.exports = function valkyrie(mod)
     let ui = null;
     if(global.TeraProxy.GUIMode)
     {
-        ui = new SettingsUI(mod, require('./settings_structure'), mod.settings, {height: require('./settings_structure').length * 40, width: 650});
+        ui = new SettingsUI(mod, require('./settings_structure'), mod.settings, {height: require('./settings_structure').length * 36, width: 650});
         
         ui.on('update', settings => 
         {

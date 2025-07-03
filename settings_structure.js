@@ -23,10 +23,5 @@ module.exports = [
         "key": "RUNEMARK",
         "name": "Disable auto skills with 7 runemark:",
         "type": "bool"
-    },
-    {
-        "key": "TITANSBANE",
-        "name": "Titansbane Ragnarok buff:",
-        "type": "bool"
     }
 ];

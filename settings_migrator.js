@@ -1,12 +1,10 @@
 const DefaultSettings = 
 {
-	"DEBUG": false,
-    "ENABLE": true,
+	"ENABLE": true,
     "FAST_CANCEL": false,
     "AUTO_GROUND_BASH": false,
     "AUTO_LEAPING_SLASH": false,
-    "RUNEMARK": true,
-    "TITANSBANE": false
+    "RUNEMARK": true
 }
 
 module.exports = function MigrateSettings(from_ver, to_ver, settings)
