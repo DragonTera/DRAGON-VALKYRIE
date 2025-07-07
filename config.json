@@ -1,8 +1,7 @@
 {
-    "version": 2,
+    "version": 2.01,
     "data": {
         "ENABLE": true,
-        "FAST_CANCEL": false,
         "AUTO_GROUND_BASH": false,
         "AUTO_LEAPING_SLASH": false,
         "RUNEMARK": false

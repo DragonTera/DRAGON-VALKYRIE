@@ -1,7 +1,6 @@
 const DefaultSettings = 
 {
 	"ENABLE": true,
-    "FAST_CANCEL": false,
     "AUTO_GROUND_BASH": false,
     "AUTO_LEAPING_SLASH": false,
     "RUNEMARK": true

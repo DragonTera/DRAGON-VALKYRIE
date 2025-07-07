@@ -1,9 +1,9 @@
 {
   "files": {
-    "index.js": "95d528cefea47d53aa6454b8fe81fc42c28a6ac637d3e9fe16310b046ba9fe45",
-    "module.json": "845143cdb191b17399241cdf36c5f417e2827d26ccc49d5f51c7fde090aff226",
-    "README.md": "8804871c505036179dd7083d89a27e32a4f4be9d4843e11cfddd8e5628c08112",
-    "settings_migrator.js": "b70898f9e5c192af220004fb317cefd3195146ebeea8774f1d8fe3a06b5df0da",
-    "settings_structure.js": "8d8826b096fa8ae9a2f5cc8de1eb55d845416875e052f1f7eb849eda9025a807"
+    "index.js": "34f50254056a354ef8d145e8ae3b8a2954c78a72cd581ce63dea702a8bebece5",
+    "module.json": "d6a9882605f79e11f02683b51d4254ecc40b14d38a83edad3d5160e473e7dcb0",
+    "README.md": "b26264baaa6d21bb8d7f2fbf2b3ecfdedbbe1cf9e186e024e4e98c2cb34420bf",
+    "settings_migrator.js": "b2389fb0979a8a98c03950aa744bc61cd40d9038878654afe9afdf900379ae29",
+    "settings_structure.js": "1da76ebd72e1f3c6e72f76231998a91d8ef2ddf0d19fec271825b0f6efd6425b"
   }
 }

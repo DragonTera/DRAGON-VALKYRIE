@@ -3,14 +3,14 @@
     "name": "DRAGON-VALKYRIE",
     "author": "Dragon",
     "description": "Generic script for valkyrie.",
-    "version": "2.00",
+    "version": "2.01",
     "servers": ["https://raw.githubusercontent.com/DragonTera/DRAGON-VALKYRIE/MASTER/"],
     "options": 
     {
         "reloadable": true,
         "niceName": "<font color='#04ACEC'>DRAGON-VALKYRIE</font>",
         "guiName": "<font color='#04ACEC'>DRAGON-VALKYRIE</font>",
-        "settingsVersion": 2.00,
+        "settingsVersion": 2.01,
         "settingsFile": "config.json",
         "settingsMigrator": "settings_migrator.js"
     }

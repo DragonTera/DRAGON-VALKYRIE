@@ -5,11 +5,6 @@ module.exports = [
         "type": "bool"
     },
     {
-        "key": "FAST_CANCEL",
-        "name": "Enable fast cancel skills:",
-        "type": "bool"
-    },
-    {
         "key": "AUTO_LEAPING_SLASH",
         "name": "Auto use Leaping Slash after Windslash:",
         "type": "bool"

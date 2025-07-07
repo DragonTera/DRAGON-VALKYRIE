@@ -172,18 +172,18 @@ const S_TWILIGHT_WALTZ_11   = 245104;   //RAGNAROK
 const S_TWILIGHT_WALTZ_12   = 245109;   //RAGNAROK
 
 //25
-const S_GODSFALL_0          = 250100;   //start
+const S_GODSFALL_0          = 250100;
 const S_GODSFALL_1          = 250101;
-const S_GODSFALL_2          = 250102;   //jump
+const S_GODSFALL_2          = 250102;
 const S_GODSFALL_3          = 250103;
 const S_GODSFALL_4          = 250109;
-const S_GODSFALL_5          = 250131;   //start fast
-const S_GODSFALL_6          = 250132;   //jump fast
+const S_GODSFALL_5          = 250131;
+const S_GODSFALL_6          = 250132;
 const S_GODSFALL_7          = 250199;
 
 const RAGNAROK_BASE         = 5000;
-                              //0     1     2     3     4     5     6    7    8     9   10    11   12     13    14   15    16   17    18    19    20    21    22    23   24    25
-const CANCEL_DELAY          = [null, null, null, null, null, 1700, 980, 800, null, 800, null, 950, null, null, null, 850, 600, null, null, null, null, null, null, 500, 1400, null];
+                              //0     1     2     3     4     5     6     7    8     9     10    11    12    13    14   15    16    17    18    19    20    21    22    23    24    25
+const SKILL_DELAY           = [null, null, null, null, null, null, 980, null, null, null, null, null, null, null, null, 850, null, null, null, null, null, null, null, null, null, null];
 
 const WHITE_LIST            = [11200, 11201, 11202, 11203, 20700, 20730, 20799, 25700, 25730, 30900, 30930, 30999, 35900, 35930, 41000, 41010, 41011, 41099, 46000, 46010, 50500, 50530, 50599, 55500, 
                                55530, 61200, 61230, 61299, 66200, 66230, 70900, 70901, 70902, 70930, 70999, 75900, 75901, 75902, 75930, 80100, 80101, 80130, 80199, 85100, 85101, 85130, 91100, 91130, 
@@ -262,7 +262,7 @@ module.exports = function valkyrie(mod)
 
     function _SkillCannotStart(__skill)
     {
-        mod.send('S_CANNOT_START_SKILL', 4,
+        mod.toClient('S_CANNOT_START_SKILL', 4,
         {
             skill: __skill
         });
@@ -272,7 +272,7 @@ module.exports = function valkyrie(mod)
 
     function _SkillStage(__event, __skill, __atkId, __stage)
     {
-        mod.toServer('S_ACTION_STAGE', 9, 
+        mod.toClient('S_ACTION_STAGE', 9, 
         {
             gameId: mod.game.me.gameId,
             loc: __event.loc,
@@ -295,22 +295,6 @@ module.exports = function valkyrie(mod)
 
     function _SkillEnd(__event, __atkId, __type)
     {
-        mod.toServer('S_ACTION_END', 5, 
-        {
-            gameId: mod.game.me.gameId,
-            loc: __event.loc,
-            w: __event.w,
-            templateId: mod.game.me.templateId,
-            skill: __event.skill,
-            type: __type,
-            id: __atkId,
-        });
-        
-        return;
-    }
-
-    function _SkillEndClient(__event, __atkId, __type)
-    {
         mod.toClient('S_ACTION_END', 5, 
         {
             gameId: mod.game.me.gameId,
@@ -325,7 +309,7 @@ module.exports = function valkyrie(mod)
         return;
     }
 
-    function _Wisper()
+    function _Wisper(__text)
     {
         mod.toClient('S_WHISPER', 3,
         {
@@ -335,7 +319,7 @@ module.exports = function valkyrie(mod)
             founder: 0,
             name: "DRAGON_VALKYRIE",
             recipient: mod.game.me.name,
-            message: "Overpoer is not active.",
+            message: __text,
         });
 
         return;
@@ -523,16 +507,10 @@ module.exports = function valkyrie(mod)
         if(DEBUG == true){console.log(TAG + 'S_ACTION_STAGE: ' + event.skill.id);}
         if(mod.settings.ENABLE == false || WHITE_LIST.includes(event.skill.id) == false){return;}
 
-        if(CANCEL_DELAY[_SkillNumber(event.skill.id)] != null)
+        if(SKILL_DELAY[_SkillNumber(event.skill.id)] != null)
         {
-            if(_SkillNumber(event.skill.id) == _SkillNumber(S_SPINNING_DEEATH_0)  && (event.skill.id != S_SPINNING_DEEATH_2  && event.skill.id != S_SPINNING_DEEATH_7)) {return;}
-            if(_SkillNumber(event.skill.id) == _SkillNumber(S_SHINING_CRESCENT_0) && (event.skill.id != S_SHINING_CRESCENT_3 && event.skill.id != S_SHINING_CRESCENT_8)){return;}
-            if(_SkillNumber(event.skill.id) == _SkillNumber(S_TWILIGHT_WALTZ_0)   && (event.skill.id != S_TWILIGHT_WALTZ_4   && event.skill.id != S_TWILIGHT_WALTZ_11)) {return;}
-                
             setTimeout(function ()
             {
-                if(mod.settings.FAST_CANCEL == true){_SkillEndClient(event, event.id, 12394123);}
-                
                 if(mod.settings.RUNEMARK == true && playerRunemark > 6){return;}
                 else
                 {
@@ -551,7 +529,7 @@ module.exports = function valkyrie(mod)
                 
                 return;
 
-            }, _SkillNumber(event.skill.id) == _SkillNumber(S_RUNEBURST_0) ? CANCEL_DELAY[_SkillNumber(event.skill.id)] : CANCEL_DELAY[_SkillNumber(event.skill.id)] / playerSpeed);
+            }, _SkillNumber(event.skill.id) == _SkillNumber(S_RUNEBURST_0) ? SKILL_DELAY[_SkillNumber(event.skill.id)] : SKILL_DELAY[_SkillNumber(event.skill.id)] / playerSpeed);
         }
 
         return;
@@ -594,7 +572,7 @@ module.exports = function valkyrie(mod)
     //  Interface
     //--------------------------------------------------------------------------------------------------------------------------------------
 
-    mod.command.add(['valkyrie'], () =>
+    mod.command.add(['valkyrie', 'valk'], () =>
     {
         if(ui){ui.show();}
     });
@@ -602,7 +580,7 @@ module.exports = function valkyrie(mod)
     let ui = null;
     if(global.TeraProxy.GUIMode)
     {
-        ui = new SettingsUI(mod, require('./settings_structure'), mod.settings, {height: require('./settings_structure').length * 36, width: 650});
+        ui = new SettingsUI(mod, require('./settings_structure'), mod.settings, {height: (require('./settings_structure').length * 36), width: 650});
         
         ui.on('update', settings => 
         {
